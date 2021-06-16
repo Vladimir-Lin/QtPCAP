@@ -1,0 +1,183 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>PCAP編譯</title>
+    <link href="classic.css" rel="stylesheet" type="text/css">
+  </head>
+  <body>
+    <div align="center">
+      <h1>PCAP編譯</h1>
+    </div>
+    <hr size="2" width="100%">
+    <h2>編譯PCAP</h2>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <hr size="2" width="100%">
+    <h2>編譯WinPCAP</h2>
+    <ol>
+      <li> 安裝DDK</li>
+      <li>解壓縮AirPcap</li>
+      <li>編譯npf.sys<br>
+      </li>
+      <li>編譯Packet.lib</li>
+      <li>編譯Wpcap.lib</li>
+      <li>包裝</li>
+      <li>註冊npf.sys<br>
+      </li>
+    </ol>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <h3> 安裝DDK</h3>
+    WinPCAP的編譯需要npptools.lib，位置在：<br>
+    <ol>
+      <li>DDK/7600.16385.1/lib/wnet/amd64</li>
+      <li>DDK/7600.16385.1/lib/wnet/i386</li>
+    </ol>
+    <br>
+    <br>
+    <h3> 解壓縮AirPcap</h3>
+    <br>
+    <br>
+    將AirPcap_Devpack_4_1_1_1838.zip解壓縮以後，產生一個目錄，裡面有個目錄是Airpcap_Devpack，將
+    該目錄搬到與winpcap平行的目錄當中。<br>
+    <br>
+    <br>
+    <h3>編譯npf.sys</h3>
+    <br>
+    從Windows Driver Kits選單裡面，找到Build Environments選取你需要的平台編譯環境的Command
+    Prompt。<br>
+    <br>
+    執行CompileDriver.bat<br>
+    <br>
+    編譯完成以後，在driver/bin/amd64目錄下可以找到npf.sys。<br>
+    <br>
+    <h3>編譯Packet.lib</h3>
+    <br>
+    winpcap/packetNtx/Dll/Project當中有個Packet.sln，打開以後，VS會轉換格式，接下來將
+    npptools.lib複製到這個目錄當中，然後選取：<br>
+    <ol>
+      <li>Debug No NetMon</li>
+      <li>Release No NetMon<br>
+      </li>
+    </ol>
+    <br>
+    編譯完成後，會在Release No NetMon/x64或Debug No NetMon/x64目錄當中產生需要的Packet.lib
+    及Packet.dll。<br>
+    <br>
+    <br>
+    <br>
+    <h3>編譯Wpcap.lib</h3>
+    <br>
+    winpcap/wpcap/PRJ當中有VS計畫檔，將Packet.lib複製到這個目錄當中，打開wpcap.sln。<br>
+    <br>
+    打開 pcap-stdinc.h ，到63行，將&lt;#if _MSC_VER &lt; 1500&gt;的設定去除，然後就可以編譯。<br>
+    <br>
+    在Release的目錄當中可以找到<br>
+    <br>
+    <br>
+    <br>
+    <h3>包裝</h3>
+    <br>
+    編譯好以後，執行wpcap/build_wpdpack.bat，這將會header複製到WpdPack目錄。<br>
+    <br>
+    <br>
+    將AirPcap及WinPCAP的header複製到預定包裝的目錄include裡面。<br>
+    <br>
+    <br>
+    <br>
+    <h3>註冊npf.sys</h3>
+    <br>
+    用系統管理員身分複製npf.sys到C:/Windows/System32/drivers目錄當中。<br>
+    <br>
+    打開 regedit.exe，找到：<br>
+    <br>
+    <b>HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\services</b><br>
+    <br>
+    產生一個稱為「NPF」的名稱，接下來加入：<br>
+    <br>
+    (REG_SZ) DisplayName = NetGroup Packet Filter Driver<br>
+    (REG_DWORD) ErrorControl = 1<br>
+    (REG_EXPAND_SZ) ImagePath = \SystemRoot\system32\DRIVERS\npf.sys<br>
+    (REG_DWORD) Start = 2<br>
+    (REG_DWORD) Type = 1<br>
+    <br>
+    <br>
+    Here are the steps on how to allow Windows to load the driver
+    automatically without needing to use the boot menu every time.<br>
+    <br>
+    The trick is that Windows allows "Test mode" where self-signed
+    kernel drivers are allowed to be loaded without the need for a
+    trusted Certificate Authority. So we turn Windows into test mode and
+    make up a self-signed certificate for the npf.sys file.<br>
+    <br>
+    First start the x64 Free Build Environment as Administrator (must be
+    full administrator with elevated privilegies if using UAC).<br>
+    <br>
+    To put Windows into Test mode where test-signed kernel modules are
+    accepted, write in this command:<br>
+    Code:<br>
+    <br>
+    bcdedit /set testsigning on<br>
+    <br>
+    You can review the current boot parameters by writing "bcdedit"
+    without parameters, it should say Testsigning: Yes for the current
+    Operating System.<br>
+    <br>
+    Now use "cd" and other required commands to navigate to the build
+    folder where npf.sys is (do not do this inside System32\drivers,
+    rather do it in the build folder). First use "makecert" to generate
+    a self-signed certificate file:<br>
+    Code:<br>
+    <br>
+    makecert -r -pe -ss PrivateCertStore -n CN=MeAndMyself npf.cer<br>
+    <br>
+    The command will create a self-signed (-r) exportable (-pe)
+    certificate and store it in PrivateCertStore storage (-ss
+    PrivateCertStore). The certificate will be saved in file npf.cer and
+    is named as MeAndMyself (-n CN=MeAndMyself). Note that self-signed
+    certificate has the "issued to" field the same as the certificate
+    name. So this is your personal certificate, issued to yourself by
+    yourself <br>
+    <br>
+    Next you want to apply this certificate to the driver file npf.sys.
+    Use "signtool" for it:<br>
+    Code:<br>
+    <br>
+    signtool sign /v /s PrivateC<br>
+    ertStore /n MeAndMyself /t
+    http://timestamp.verisign.com/scripts/timestamp.dll n<br>
+    pf.sys<br>
+    <br>
+    The "sign" parameter tells the action that we want to sign a file,
+    /v turns on verbose output so you see what it does. The certificate
+    named MeAndMyself (/n MeAndMyself) is selected from storage
+    PrivateCertStore (/s PrivateCertStore). The certificate can be
+    timestamped using the online tool from VeriSign (/t
+    http://timestamp.verisign.com/scripts/timestamp.dll) and it will be
+    applied to the file npf.sys.<br>
+    <br>
+    Now copy this test-signed npf.sys file to System32\drivers and
+    reboot your computer. Since you enabled Test mode using bcdedit, it
+    should now load the driver without any input from the boot menu.<br>
+    <br>
+    <br>
+    <hr size="2" width="100%">
+    <div align="center"><font color="#cc9933"><i><b>Neutrino
+            International Inc. 2001~2015</b></i></font><br>
+    </div>
+    <br>
+  </body>
+</html>
